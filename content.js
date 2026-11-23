@@ -23,7 +23,7 @@ window.SITE = {
   last: "Adam",
   role: "Immersive Software Engineering student at the University of Limerick",
   lede: "First-year student who likes problems with a measurable answer, from CPU caches to snooker shots.",
-  photo: "",                         // e.g. "images/photo.jpg"  (leave "" to show the photo frame placeholder)
+  photo: "images/pfp.png",                         // e.g. "images/photo.jpg"  (leave "" to show the photo frame placeholder)
   photoAlt: "Portrait of Halim Adam",
   linkedin: "https://www.linkedin.com/in/halim-adam-swe",   // required by the assignment
   github: "https://github.com/halimadam",
