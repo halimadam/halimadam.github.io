@@ -157,8 +157,8 @@ main, footer { position: relative; z-index: 1; }
 .moon::after { content: ""; position: absolute; inset: -14px; border-radius: 50%; border: 1px solid rgba(42, 166, 163, .45); }
 
 .photo {
-  position: absolute; z-index: 2; left: clamp(14px, 3.2vw, 56px); top: clamp(64px, 9vh, 116px);
-  width: clamp(108px, 13vw, 176px); aspect-ratio: 4 / 5; transform: rotate(-5deg); will-change: transform, opacity;
+  position: absolute; z-index: 2; left: clamp(14px, 2.6vw, 48px); top: clamp(60px, 7.5vh, 100px);
+  width: clamp(96px, 11vw, 150px); aspect-ratio: 4 / 5; transform: rotate(-5deg); will-change: transform, opacity;
   border: 3px solid var(--text); border-radius: 18px; background: var(--panel); overflow: hidden;
   box-shadow: 0 14px 40px rgba(0, 0, 0, .5), 0 0 0 1px var(--teal), 8px 8px 0 -1px rgba(17, 100, 102, .7);
 }
@@ -167,14 +167,14 @@ main, footer { position: relative; z-index: 1; }
   background: radial-gradient(circle at 50% 38%, #3f524b 0 18%, transparent 19%), radial-gradient(ellipse at 50% 100%, #3f524b 0 42%, transparent 43%), var(--panel-2); }
 
 .hero-copy {
-  position: relative; z-index: 3; padding: clamp(84px, 13vh, 170px) var(--gut) 170px clamp(var(--gut), 6.5vw, 96px); max-width: 980px; will-change: transform;
+  position: relative; z-index: 3; padding: clamp(96px, 18vh, 190px) var(--gut) 170px clamp(var(--gut), 6.5vw, 96px); max-width: 980px; will-change: transform;
 }
 .name {
   font-family: var(--f-bubble); font-weight: 700; font-size: clamp(4.2rem, min(16.5vw, 20vh), 11rem); line-height: .9; letter-spacing: .01em;
   margin: 0 0 .22em; color: #D1E8E2; filter: url(#bubble); display: inline-block; padding: 0 .12em .12em 0; transform: translateZ(0);
 }
 .name span { display: block; }
-@media (max-height: 760px) { .hero-copy { padding-top: 80px; } .lede { font-size: 1rem; } .hero-links { margin-top: 1em; } }
+@media (max-height: 760px) { .hero-copy { padding-top: 150px; } .name { font-size: clamp(3.6rem, min(16.5vw, 17vh), 11rem); } .lede { display: none; } .hero-links { margin-top: 1em; } }
 @media (max-width: 1100px) { .name { filter: url(#bubble-md); } }
 @media (max-width: 700px) { .name { filter: url(#bubble-sm); } }
 .name .name-2 { margin-left: .5em; }

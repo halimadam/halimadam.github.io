@@ -566,13 +566,14 @@
   /* reveal on enter + active section */
   doc.documentElement.classList.add('js');
   /* Reveal by position (an IntersectionObserver ignores fully clipped elements, so we check by hand). */
-  var pending = $$('.reveal, .slash');
+  var revealEls = $$('.reveal, .slash');
   function checkReveals() {
-    if (!pending.length) return;
-    var limit = innerHeight * 0.92;
-    pending = pending.filter(function (el) {
-      if (el.getBoundingClientRect().top < limit) { el.classList.add('in'); return false; }
-      return true;
+    var vh = innerHeight, limit = vh * 0.92;
+    revealEls.forEach(function (el) {
+      var top = el.getBoundingClientRect().top, shown = el.classList.contains('in');
+      if (!shown && top < limit) el.classList.add('in');
+      /* scrolled back up past it: put it back, so it plays again on the way down (gap avoids flicker) */
+      else if (shown && top > vh + 60) el.classList.remove('in');
     });
   }
   if ('IntersectionObserver' in window) {
