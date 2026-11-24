@@ -11,6 +11,7 @@
   var $$ = function (s, r) { return Array.prototype.slice.call((r || doc).querySelectorAll(s)); };
   var clamp = function (v, a, b) { return Math.max(a, Math.min(b, v)); };
   var reduceMotion = function () { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; };
+  var pad = function (n) { return n < 10 ? '0' + n : String(n); };
 
   /* ---------- tiny DOM helpers ---------- */
   function h(tag, attrs) {
@@ -40,7 +41,7 @@
   }
   function isPh(s) { return typeof s === 'string' && s.trim().indexOf('✎') === 0; }
   /* Text that may be a placeholder (starts with the pencil mark). */
-  function T(s) { return isPh(s) ? h('span', { class: 'ph' }, s.trim().replace(/^\u270E\s+/, '\u270E\u00A0')) : s; }
+  function T(s) { return isPh(s) ? h('span', { class: 'ph' }, s.trim().replace(/^✎\s+/, '✎ ')) : s; }
   function P(s, cls) { return has(s) ? h('p', { class: cls || null }, T(s)) : null; }
   function field(label, value) {
     return has(value) ? h('div', { class: 'field' }, h('h4', null, label), h('p', null, T(value))) : null;
@@ -54,10 +55,12 @@
       return h('a', { href: l.url, target: '_blank', rel: 'noopener' }, l.label || l.url);
     }));
   }
-  function gallery(list) {
-    if (!has(list)) return null;
-    var items = list.map(function (im) { return typeof im === 'string' ? { src: im, alt: '', caption: '' } : im; })
+  function normImgs(list) {
+    return (list || []).map(function (im) { return typeof im === 'string' ? { src: im, alt: '', caption: '' } : im; })
       .filter(function (im) { return im && has(im.src); });
+  }
+  function gallery(list) {
+    var items = normImgs(list);
     if (!items.length) return null;
     return h('div', { class: 'gallery' }, items.map(function (im) {
       var img = h('img', { src: im.src, alt: im.alt || im.caption || '', loading: 'lazy' });
@@ -76,21 +79,45 @@
   }
   $('#lightbox').addEventListener('click', function (e) { if (e.target === this) this.close(); });
 
+  /* The picture (or the placeholder frame) that sits opposite the text. The first picture in an
+     entry's images list fills the frame; the rest go into a small gallery under the text. */
+  var IMG_ICON = '<svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="1.8"/><path d="M4 18l5.5-5.5 4 4 2.5-2.5L20 18"/></svg>';
+  var CHECK_ICON = '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M7.8 12.4l3 3 5.4-6"/></svg>';
+  function media(list, label, cls) {
+    var im = normImgs(list)[0];
+    var box = h('div', { class: 'feat-media reveal reveal-media ' + (cls || '') });
+    function placeholder() {
+      box.innerHTML = '';
+      box.appendChild(h('div', { class: 'media-ph', role: 'img', 'aria-label': label, html: IMG_ICON }, h('span', null, label)));
+    }
+    if (im) {
+      var img = h('img', { src: im.src, alt: im.alt || im.caption || '', loading: 'lazy' });
+      img.addEventListener('error', function () { console.warn('[portfolio] Picture not found:', im.src); placeholder(); });
+      box.appendChild(h('button', { type: 'button', class: 'thumb', 'aria-label': 'Enlarge picture' + (im.alt ? ': ' + im.alt : ''), onclick: function () { openLightbox(im); } }, img));
+    } else placeholder();
+    return box;
+  }
+  function rest(list) { return gallery(normImgs(list).slice(1)); }
+  /* One text-and-picture row. Every second row is mirrored. */
+  function feat(i, off, textKids, mediaBox) {
+    var flip = (i + off) % 2 === 1;
+    return h('article', { class: 'feat' + (flip ? ' flip' : '') },
+      h('div', { class: 'feat-text reveal' }, h('p', { class: 'feat-no' }, pad(i + 1)), textKids),
+      mediaBox);
+  }
+
   /* ---------- section scaffolding ---------- */
   var NAV = [];
   function section(id, label, title) {
     var kids = Array.prototype.slice.call(arguments, 3);
     NAV.push({ id: id, label: label });
-    return h('section', { id: id, class: 'sec', 'aria-labelledby': id + '-h' },
+    var alt = NAV.length % 2 === 0;
+    return h('section', { id: id, class: 'sec' + (alt ? ' alt' : ''), 'aria-labelledby': id + '-h' },
       h('div', { class: 'wrap' },
         h('div', { class: 'sec-head' },
           h('h2', { id: id + '-h', tabindex: '-1', class: 'slash' }, title),
           h('span', { class: 'pin', 'aria-hidden': 'true' })),
         kids));
-  }
-  function card(cls) {
-    var kids = Array.prototype.slice.call(arguments, 1);
-    return h('article', { class: 'card reveal ' + (cls || '') }, kids);
   }
 
   /* ---------- HERO ---------- */
@@ -99,10 +126,15 @@
       ? h('img', { src: C.photo, alt: C.photoAlt || '' })
       : h('div', { class: 'photo-ph', 'aria-label': 'Space for a photo' }, h('span', null, 'photo soon'));
     var art = h('div', { class: 'hero-art', 'aria-hidden': 'true', html:
-      '<div class="moon" data-speed="0.10"></div>' +
-      '<svg class="ridge r1" data-speed="0.18" viewBox="0 0 1440 520" preserveAspectRatio="none"><path d="M0 250 L90 214 L180 240 L300 160 L400 226 L520 176 L640 250 L760 190 L880 238 L1010 170 L1140 244 L1260 196 L1440 250 L1440 520 L0 520Z" fill="#0d1527"/><path d="M0 250 L90 214 L180 240 L300 160 L400 226 L520 176 L640 250 L760 190 L880 238 L1010 170 L1140 244 L1260 196 L1440 250" fill="none" stroke="#3fd8e6" stroke-opacity=".3" stroke-width="1.4"/></svg>' +
-      '<svg class="ridge r2" data-speed="0.3" viewBox="0 0 1440 520" preserveAspectRatio="none"><path d="M0 330 L140 270 L260 322 L380 250 L520 330 L660 262 L800 336 L940 268 L1090 330 L1230 274 L1440 336 L1440 520 L0 520Z" fill="#0a1020"/></svg>' +
-      '<svg class="ridge r3" data-speed="0.46" viewBox="0 0 1440 520" preserveAspectRatio="none"><path d="M0 400 L120 360 L250 404 L420 340 L560 410 L720 350 L900 414 L1060 352 L1230 410 L1440 360 L1440 520 L0 520Z" fill="#070a12"/></svg>' });
+      '<div class="hero-glow"></div>' +
+      '<div class="moon" data-speed="0.10">' +
+        '<svg class="moon-spin" id="moon-spin" viewBox="0 0 200 200">' +
+          '<defs><clipPath id="moon-clip"><circle cx="100" cy="100" r="100"/></clipPath></defs>' +
+          '<g clip-path="url(#moon-clip)"><rect width="200" height="200" fill="#E6B78C"/>' +
+          '<g fill="none" stroke="#2C3531" stroke-opacity=".85" stroke-width="3.6" stroke-linecap="round">' +
+            '<path d="M100 -2V202"/><path d="M-2 100H202"/><path d="M34 22C70 64 70 136 34 178"/><path d="M166 22C130 64 130 136 166 178"/>' +
+          '</g></g>' +
+        '</svg><i class="moon-shade"></i></div>' });
     return h('section', { id: 'top', class: 'hero' },
       art,
       h('div', { class: 'photo', id: 'photo' }, photo),
@@ -112,9 +144,8 @@
         h('p', { class: 'role' }, C.role),
         P(C.lede, 'lede'),
         h('p', { class: 'hero-links' },
-          has(C.linkedin) ? h('a', { class: 'btn primary', href: C.linkedin, target: '_blank', rel: 'me noopener' }, 'LinkedIn profile') : null,
-          has(C.github) ? h('a', { class: 'btn', href: C.github, target: '_blank', rel: 'noopener' }, 'GitHub') : null),
-        h('p', { class: 'hint' }, 'Scroll down, or open the menu at the top right to jump to a section.')
+          has(C.linkedin) ? h('a', { class: 'btn primary', href: C.linkedin, target: '_blank', rel: 'me noopener' }, 'LinkedIn') : null,
+          has(C.github) ? h('a', { class: 'btn', href: C.github, target: '_blank', rel: 'noopener' }, 'GitHub') : null)
       )
     );
   }
@@ -123,28 +154,31 @@
   function buildAbout() {
     var a = C.about || {};
     return section('about', 'About', a.title || 'About me',
-      h('div', { class: 'split' },
-        h('div', { class: 'prose' }, (a.bio || []).map(function (p) { return P(p); })),
-        h('div', { class: 'aside' },
-          has(a.keySkills) ? h('div', null, h('h3', null, 'Key skills'), chips(a.keySkills)) : null,
-          has(a.careerInterests) ? h('div', null, h('h3', null, 'Career interests'), h('ul', { class: 'plain' }, a.careerInterests.map(function (i) { return h('li', null, T(i)); }))) : null,
-          has(C.cv) ? h('p', null, h('a', { class: 'btn', href: C.cv, target: '_blank', rel: 'noopener' }, 'Download my CV')) : null
-        )));
+      h('div', { class: 'feat' },
+        h('div', { class: 'feat-text prose reveal' },
+          (a.bio || []).map(function (p, i) { return P(p, i === 0 ? 'lead' : null); }),
+          has(a.keySkills) ? [h('h3', { class: 'mini' }, 'Key skills'), chips(a.keySkills)] : null,
+          has(a.careerInterests) ? [h('h3', { class: 'mini' }, 'Career interests'), h('ul', { class: 'plain' }, a.careerInterests.map(function (i) { return h('li', null, T(i)); }))] : null,
+          has(C.cv) ? h('p', { style: 'margin-top:1.4em' }, h('a', { class: 'btn', href: C.cv, target: '_blank', rel: 'noopener' }, 'Download my CV')) : null
+        ),
+        media(has(a.image) ? [a.image] : [], 'A photo of you goes here', 'tall')));
   }
 
   function buildLearn() {
     var L = C.learn; if (!L) return null;
     return section('learn', 'Learn more', L.title || 'Learn more',
       P(L.intro, 'intro'),
-      has(L.strengths) ? h('div', { class: 'grid g3' }, L.strengths.map(function (s) {
-        return card('', h('h3', null, T(s.name)), P(s.note));
+      has(L.strengths) ? h('div', { class: 'statements' }, L.strengths.map(function (s, i) {
+        return h('div', { class: 'statement reveal' }, h('span', { class: 'big-no' }, pad(i + 1)), h('h3', null, T(s.name)), P(s.note));
       })) : null,
       has(L.values) ? h('h3', { class: 'sub' }, 'Three values that guide me') : null,
-      has(L.values) ? h('div', { class: 'grid g3' }, L.values.map(function (v) {
-        return card('value', h('h3', null, T(v.name)), field('Why it matters', v.why), field('How it shapes my teamwork', v.how), field('Where it shows', v.example));
+      has(L.values) ? h('div', { class: 'value-rows' }, L.values.map(function (v, i) {
+        return h('article', { class: 'value-row reveal' },
+          h('div', null, h('span', { class: 'big-no' }, pad(i + 1)), h('h3', null, T(v.name))),
+          h('div', null, field('Why it matters', v.why), field('How it shapes my teamwork', v.how), field('Where it shows', v.example)));
       })) : null,
       has(L.evidence) ? h('h3', { class: 'sub' }, 'Evidence') : null,
-      has(L.evidence) ? h('div', { class: 'grid g2' }, L.evidence.map(function (e) { return card('', h('h3', null, T(e.title)), P(e.text)); })) : null
+      has(L.evidence) ? h('div', { class: 'grid g2' }, L.evidence.map(function (e) { return h('article', { class: 'quote reveal' }, h('h3', null, T(e.title)), P(e.text)); })) : null
     );
   }
 
@@ -156,12 +190,12 @@
   function buildKnow() {
     var K = C.know; if (!K) return null;
     return section('know', 'What I know', K.title || 'What I know',
-      has(K.skills) ? h('div', { class: 'skillgrid' }, K.skills.map(function (g) {
-        return h('div', { class: 'skillgroup reveal' }, h('h3', null, T(g.group)), chips(g.items));
+      has(K.skills) ? h('div', { class: 'skillrows' }, K.skills.map(function (g) {
+        return h('div', { class: 'skillrow reveal' }, h('h3', null, T(g.group)), chips(g.items));
       })) : null,
       h('div', { class: 'grid g2 tl' },
-        has(K.education) ? h('div', null, h('h3', { class: 'sub' }, 'Education'), timeline(K.education)) : null,
-        (has(K.experience) || has(K.certificates)) ? h('div', null, h('h3', { class: 'sub' }, 'Experience'), has(K.experience) ? timeline(K.experience) : null,
+        has(K.education) ? h('div', { class: 'reveal' }, h('h3', { class: 'sub' }, 'Education'), timeline(K.education)) : null,
+        (has(K.experience) || has(K.certificates)) ? h('div', { class: 'reveal' }, h('h3', { class: 'sub' }, 'Experience'), has(K.experience) ? timeline(K.experience) : null,
           has(K.certificates) ? h('div', null, h('h3', { class: 'sub' }, 'Certificates'), timeline(K.certificates)) : null) : null
       ));
   }
@@ -169,45 +203,54 @@
   function buildProjects() {
     var Pj = C.projects; if (!Pj || !has(Pj.items)) return null;
     return section('projects', 'Projects', Pj.title || 'Projects', P(Pj.intro, 'intro'),
-      h('div', { class: 'stack' }, Pj.items.map(function (p) {
-        return card('project',
+      h('div', { class: 'feats' }, Pj.items.map(function (p, i) {
+        return feat(i, 0, [
           h('div', { class: 'card-top' }, h('h3', null, T(p.title)), has(p.status) ? h('span', { class: 'badge' }, p.status) : null),
           has(p.date) || has(p.context) ? h('p', { class: 'meta' }, [p.date, p.context].filter(has).join(', ')) : null,
-          P(p.summary), field('What I built', p.mine), chips(p.tags, 'tags'), links(p.links), gallery(p.images));
+          P(p.summary), field('What I built', p.mine), chips(p.tags, 'tags'), links(p.links), rest(p.images)
+        ], media(p.images, 'Screenshot goes here'));
       })));
   }
 
   function buildTalks() {
     var Tk = C.talks; if (!Tk || !has(Tk.items)) return null;
     return section('talks', 'Talks', Tk.title || 'What I learned from others', P(Tk.intro, 'intro'),
-      h('div', { class: 'stack' }, Tk.items.map(function (t) {
-        return card('talk',
-          h('h3', null, T(t.title)),
-          h('p', { class: 'meta' }, [T(t.speaker), has(t.speakerRole) ? ', ' + t.speakerRole : '', has(t.date) ? ' | ' : '', has(t.date) ? T(t.date) : ''].map(function (x) { return x; })),
-          has(t.notes) ? h('div', { class: 'notes' }, h('h4', null, 'Notes from the talk'), h('ul', null, t.notes.map(function (n) { return h('li', null, T(n)); }))) : null,
-          h('div', { class: 'reflect' }, field('Key messages', t.keyMessage), field('What surprised me', t.surprise), field('What challenged my thinking', t.challenged), field('How it may shape my career', t.career)),
-          gallery(t.images),
-          h('p', { class: 'links' }, has(t.slides) ? h('a', { href: t.slides, target: '_blank', rel: 'noopener' }, 'View the slides') : null, has(t.link) ? h('a', { href: t.link, target: '_blank', rel: 'noopener' }, 'Link') : null));
+      h('div', { class: 'talks' }, Tk.items.map(function (t, i) {
+        return h('article', { class: 'talk' + (i % 2 ? ' flip' : '') },
+          h('div', { class: 'talk-side reveal' },
+            h('p', { class: 'feat-no' }, pad(i + 1)),
+            h('h3', null, T(t.title)),
+            h('p', { class: 'meta' }, [T(t.speaker), has(t.speakerRole) ? ', ' + t.speakerRole : '', has(t.date) ? ' | ' : '', has(t.date) ? T(t.date) : '']),
+            media(t.images, 'Photo or slide from the talk')),
+          h('div', { class: 'talk-body reveal' },
+            has(t.notes) ? h('div', { class: 'notes' }, h('h4', null, 'Notes from the talk'), h('ul', null, t.notes.map(function (n) { return h('li', null, T(n)); }))) : null,
+            h('div', { class: 'panel' }, h('div', { class: 'reflect' }, field('Key messages', t.keyMessage), field('What surprised me', t.surprise), field('What challenged my thinking', t.challenged), field('How it may shape my career', t.career))),
+            rest(t.images),
+            h('p', { class: 'links' }, has(t.slides) ? h('a', { href: t.slides, target: '_blank', rel: 'noopener' }, 'View the slides') : null, has(t.link) ? h('a', { href: t.link, target: '_blank', rel: 'noopener' }, 'Link') : null)));
       })));
   }
 
   function buildIndustry() {
     var I = C.industry; if (!I || !has(I.items)) return null;
     return section('industry', 'Industry', I.title || 'Engaging with industry', P(I.intro, 'intro'),
-      h('div', { class: 'stack' }, I.items.map(function (e) {
-        return card('', h('h3', null, T(e.title)), has(e.date) ? h('p', { class: 'meta' }, T(e.date)) : null,
-          h('div', { class: 'reflect' }, field('What I expected', e.expectations), field('What I learned about employers', e.learned), field('What stood out', e.stoodOut), field('What I will do next', e.actions)),
-          gallery(e.images), links([{ label: 'Link', url: e.link }]));
+      h('div', { class: 'feats' }, I.items.map(function (e, i) {
+        return feat(i, 1, [
+          h('h3', null, T(e.title)), has(e.date) ? h('p', { class: 'meta' }, T(e.date)) : null,
+          field('What I expected', e.expectations), field('What I learned about employers', e.learned), field('What stood out', e.stoodOut), field('What I will do next', e.actions),
+          rest(e.images), links([{ label: 'Link', url: e.link }])
+        ], media(e.images, 'Event photo goes here'));
       })));
   }
 
   function buildBeyond() {
     var B = C.beyond; if (!B || !has(B.items)) return null;
     return section('beyond', 'Beyond class', B.title || 'Beyond the classroom', P(B.intro, 'intro'),
-      h('div', { class: 'stack' }, B.items.map(function (e) {
-        return card('', h('h3', null, T(e.title)), has(e.role) || has(e.date) ? h('p', { class: 'meta' }, [T(e.role), has(e.date) ? ' | ' : '', has(e.date) ? T(e.date) : '']) : null,
-          h('div', { class: 'reflect' }, field('My contribution', e.contribution), field('Impact on others', e.impact), field('Impact on my development', e.growth)),
-          chips(e.skills, 'tags'), gallery(e.images), links([{ label: 'Link', url: e.link }]));
+      h('div', { class: 'feats' }, B.items.map(function (e, i) {
+        return feat(i, 0, [
+          h('h3', null, T(e.title)), has(e.role) || has(e.date) ? h('p', { class: 'meta' }, [T(e.role), has(e.date) ? ' | ' : '', has(e.date) ? T(e.date) : '']) : null,
+          field('My contribution', e.contribution), field('Impact on others', e.impact), field('Impact on my development', e.growth),
+          chips(e.skills, 'tags'), rest(e.images), links([{ label: 'Link', url: e.link }])
+        ], media(e.images, 'Photo goes here', 'tall'));
       })));
   }
 
@@ -215,11 +258,15 @@
     var Y = C.year; if (!Y) return null;
     return section('year', 'This year', Y.title || 'How I developed this year', P(Y.intro, 'intro'),
       has(Y.required) ? h('div', { class: 'grid g2' }, Y.required.map(function (r) {
-        return card('required', h('h3', null, T(r.title)), has(r.done) ? h('p', { class: 'meta' }, T(r.done)) : null, P(r.note), gallery(r.images));
+        return h('article', { class: 'panel check reveal' }, h('span', { html: CHECK_ICON }),
+          h('div', null, h('h3', null, T(r.title)), has(r.done) ? h('p', { class: 'meta' }, T(r.done)) : null, P(r.note), gallery(r.images)));
       })) : null,
-      has(Y.items) ? h('div', { class: 'stack' }, Y.items.map(function (a) {
-        return card('', h('h3', null, T(a.title)),
-          h('div', { class: 'reflect four' }, field('Situation', a.situation), field('Learning', a.learning), field('Application', a.application), field('Next step', a.next)),
+      has(Y.items) ? h('div', { class: 'steps' }, Y.items.map(function (a) {
+        return h('article', { class: 'step-row reveal' }, h('h3', null, T(a.title)),
+          h('div', { class: 'step-cols' },
+            [['Situation', a.situation], ['Learning', a.learning], ['Application', a.application], ['Next step', a.next]].map(function (s) {
+              return has(s[1]) ? h('div', { class: 'step-col' }, h('h4', null, s[0]), h('p', null, T(s[1]))) : null;
+            })),
           gallery(a.images));
       })) : null);
   }
@@ -227,9 +274,9 @@
   function buildNext() {
     var N = C.next; if (!N) return null;
     return section('next', 'Next steps', N.title || 'Where I\'m going next', P(N.intro, 'intro'),
-      has(N.goals) ? h('h3', { class: 'sub' }, 'Goals for the next 12 months') : null,
-      has(N.goals) ? h('div', { class: 'grid g3' }, N.goals.map(function (g) {
-        return card('goal', h('h3', null, T(g.goal)), field('Why it matters', g.why), field('What I will do', g.actions), field('Target date', g.target));
+      has(N.goals) ? h('h3', { class: 'sub', style: 'margin-top:0' }, 'Goals for the next 12 months') : null,
+      has(N.goals) ? h('div', { class: 'grid g3' }, N.goals.map(function (g, i) {
+        return h('article', { class: 'goal reveal' }, h('span', { class: 'big-no' }, pad(i + 1)), h('h3', null, T(g.goal)), field('Why it matters', g.why), field('What I will do', g.actions), field('Target date', g.target));
       })) : null,
       has(N.reading) ? h('h3', { class: 'sub' }, 'Reading and resources') : null,
       has(N.reading) ? h('ul', { class: 'reading' }, N.reading.map(function (r) {
@@ -250,18 +297,20 @@
   function buildContact() {
     var K = C.contact; if (!K) return null;
     var emailOk = has(C.email) && !isPh(C.email);
-    return section('contact', 'Contact', K.title || 'Get in touch', P(K.text, 'intro'),
-      h('ul', { class: 'contact' },
-        has(C.linkedin) ? h('li', null, h('a', { class: 'btn primary', href: C.linkedin, target: '_blank', rel: 'me noopener' }, 'LinkedIn')) : null,
-        has(C.github) ? h('li', null, h('a', { class: 'btn', href: C.github, target: '_blank', rel: 'noopener' }, 'GitHub')) : null,
-        has(C.email) ? h('li', null, emailOk ? h('a', { class: 'btn', href: 'mailto:' + C.email }, C.email) : h('span', { class: 'ph' }, C.email)) : null));
+    return section('contact', 'Contact', K.title || 'Get in touch',
+      h('div', { class: 'cta reveal' },
+        P(K.text, 'intro'),
+        h('ul', { class: 'contact' },
+          has(C.linkedin) ? h('li', null, h('a', { class: 'btn primary', href: C.linkedin, target: '_blank', rel: 'me noopener' }, 'LinkedIn')) : null,
+          has(C.github) ? h('li', null, h('a', { class: 'btn', href: C.github, target: '_blank', rel: 'noopener' }, 'GitHub')) : null,
+          has(C.email) ? h('li', null, emailOk ? h('a', { class: 'btn', href: 'mailto:' + C.email }, C.email) : h('span', { class: 'ph' }, C.email)) : null)));
   }
 
   function buildFooter() {
     var f = $('#footer');
     f.className = 'foot';
     f.appendChild(h('div', { class: 'wrap' },
-      h('p', { class: 'fine' }, '\u00A9 ', String(new Date().getFullYear()), ' ', C.first, ' ', C.last)
+      h('p', { class: 'fine' }, '© ', String(new Date().getFullYear()), ' ', C.first, ' ', C.last)
     ));
   }
 
@@ -313,12 +362,16 @@
 
   /* ---------- kunai ---------- */
   var kw = $('#kunai');
-  var K = { state: 'rest', x: 0, y: 0, a: 80, s: 0.5, pin: null, raf: 0, stuckAngle: 24 };
+  var K = { state: 'rest', x: 0, y: 0, a: 78, s: 0.5, pin: null, raf: 0, stuckAngle: 24 };
   function setK(x, y, a, s) {
     K.x = x; K.y = y; K.a = a; K.s = s;
     kw.style.transform = 'translate3d(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px,0) rotate(' + a.toFixed(2) + 'deg) scale(' + s.toFixed(3) + ')';
   }
-  function restPose() { return { x: Math.round(innerWidth / 2) + 34, y: innerHeight - 22, a: 80, s: 0.5 }; }
+  /* The kunai waits in the bottom-left corner. Its tip is the origin, so the body trails off to the left. */
+  function restPose() {
+    var a = 78, s = 0.5, body = 110 * s;
+    return { x: 28 + body * Math.sin(a * Math.PI / 180), y: innerHeight - 34, a: a, s: s };
+  }
   function toRest() { var r = restPose(); setK(r.x, r.y, r.a, r.s); }
   function pinPoint(pin) { var r = pin.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }
   var eIO = function (t) { return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; };
@@ -363,6 +416,9 @@
     if (p.y < -150 || p.y > innerHeight + 40) returnToRest();
   }
 
+  /* Every jump is a fresh throw from the bottom-left corner. If the kunai is still stuck in the
+     previous section it is first pulled free and carried back to the corner, so a jump between two
+     nearby sections still reads as one clear throw instead of a wiggle on the spot. */
   function jumpTo(id) {
     var sec = doc.getElementById(id); if (!sec) return;
     var pin = $('.pin', sec);
@@ -383,41 +439,102 @@
       requestAnimationFrame(function () { land(pin, 22); done(); }); return;
     }
 
-    var start = (K.state === 'stuck') ? { x: K.x, y: K.y, a: K.a, s: K.s } : restPose();
-    if (K.state === 'stuck' && (start.y < 0 || start.y > innerHeight)) start = restPose();
+    var rest = restPose();
+    var from = { x: K.x, y: K.y, a: K.a, s: K.s };
+    var pullBack = (K.state === 'stuck' && K.y >= -20 && K.y <= innerHeight + 20) ? 300 : 0;
+    var fly = clamp(580 + Math.abs(endY - startY) * 0.05, 720, 1050);
+    var total = pullBack + fly;
     K.state = 'flying'; K.pin = null;
     kw.classList.remove('stuck', 'thud'); kw.classList.add('flying'); kw.style.opacity = '';
+    if (!pullBack) setK(rest.x, rest.y, rest.a, rest.s);
 
-    var dx = target.x - start.x, dy = target.y - start.y, dist = Math.hypot(dx, dy) || 1;
-    var nx = -dy / dist, ny = dx / dist, bow = Math.min(160, dist * 0.18);
-    var c = { x: (start.x + target.x) / 2 + nx * bow, y: (start.y + target.y) / 2 + ny * bow };
-    var dur = clamp(520 + Math.abs(endY - startY) * 0.06, 640, 1000);
-    var t0 = performance.now(), lastA = start.a;
+    var dx = target.x - rest.x, dy = target.y - rest.y, dist = Math.hypot(dx, dy) || 1;
+    var nx = -dy / dist, ny = dx / dist, bow = Math.min(190, dist * 0.2);
+    var c = { x: (rest.x + target.x) / 2 + nx * bow, y: (rest.y + target.y) / 2 + ny * bow };
+    var t0 = performance.now(), lastA = rest.a;
 
     function interrupt() { cancelFlight(); unlisten(); scrollTo(0, scrollY); land(pin, clamp(lastA, -40, 40)); done(); }
     function unlisten() { ['wheel', 'touchstart', 'keydown'].forEach(function (ev) { removeEventListener(ev, interrupt); }); }
     ['wheel', 'touchstart', 'keydown'].forEach(function (ev) { addEventListener(ev, interrupt, { passive: true, once: true }); });
 
     function frame(now) {
-      var t = clamp((now - t0) / dur, 0, 1);
+      var el = now - t0, t = clamp(el / total, 0, 1);
       scrollTo(0, startY + (endY - startY) * eIO(t));
-      var k = eOut(t), u = 1 - k;
-      var x = u * u * start.x + 2 * u * k * c.x + k * k * target.x;
-      var y = u * u * start.y + 2 * u * k * c.y + k * k * target.y;
-      var tx = 2 * u * (c.x - start.x) + 2 * k * (target.x - c.x);
-      var ty = 2 * u * (c.y - start.y) + 2 * k * (target.y - c.y);
-      var tang = Math.atan2(tx, -ty) * 180 / Math.PI;
-      var a = lerpAngle(start.a, tang, clamp(t / 0.22, 0, 1));
-      lastA = a;
-      setK(x, y, a, lerp(start.s, 0.95, k));
+      if (el < pullBack) {
+        var r = eIO(el / pullBack);
+        setK(lerp(from.x, rest.x, r), lerp(from.y, rest.y, r), lerpAngle(from.a, rest.a, r), lerp(from.s, rest.s, r));
+        lastA = K.a;
+      } else {
+        var ft = clamp((el - pullBack) / fly, 0, 1);
+        var k = eOut(ft), u = 1 - k;
+        var x = u * u * rest.x + 2 * u * k * c.x + k * k * target.x;
+        var y = u * u * rest.y + 2 * u * k * c.y + k * k * target.y;
+        var tx = 2 * u * (c.x - rest.x) + 2 * k * (target.x - c.x);
+        var ty = 2 * u * (c.y - rest.y) + 2 * k * (target.y - c.y);
+        var tang = Math.atan2(tx, -ty) * 180 / Math.PI;
+        var a = lerpAngle(rest.a, tang, clamp(ft / 0.22, 0, 1));
+        lastA = a;
+        setK(x, y, a, lerp(rest.s, 0.95, k));
+      }
       if (t < 1) K.raf = requestAnimationFrame(frame);
-      else { unlisten(); scrollTo(0, endY); land(pin, clamp(a, -40, 40)); done(); }
+      else { unlisten(); scrollTo(0, endY); land(pin, clamp(lastA, -40, 40)); done(); }
     }
     K.raf = requestAnimationFrame(frame);
   }
 
+  /* ---------- the ball (spins against the scroll) ---------- */
+  var moonSpin = $('#moon-spin'), moonAng = 0, moonTarget = 0, moonRaf = 0, moonLast = 0;
+  function spinMoon(now) {
+    var dt = moonLast ? Math.min(now - moonLast, 64) : 16;   /* time-based easing: same feel at any frame rate */
+    moonLast = now;
+    moonAng += (moonTarget - moonAng) * (1 - Math.exp(-dt / 110));
+    moonSpin.style.transform = 'rotate(' + moonAng.toFixed(2) + 'deg)';
+    if (Math.abs(moonTarget - moonAng) > 0.05) moonRaf = requestAnimationFrame(spinMoon);
+    else { moonRaf = 0; moonLast = 0; }
+  }
+
+  /* ---------- the katana ----------
+     Scroll position drives everything, so scrolling back up puts the sword back in its sheath.
+     0 to about half: the blade slides out of the saya.
+     Second half: the sword swings upright, the saya slips away to the left, and the blade ends
+     embedded along the right edge. Units below are the sword's own drawing units. */
+  var swordEl = $('#kt-sword'), sayaEl = $('#kt-saya'), glintEl = $('#kt-glint'), docked = false;
+  function katanaFrame(y) {
+    var W = innerWidth, vh = innerHeight;
+    var u = clamp(y / (vh * 0.95), 0, 1), a, b;
+    if (reduceMotion()) { a = u > 0.25 ? 1 : 0; b = u > 0.5 ? 1 : 0; }
+    else { a = eIO(clamp(u / 0.52, 0, 1)); b = eIO(clamp((u - 0.5) / 0.5, 0, 1)); }
+
+    var sx = Math.max(14, W * 0.03);
+    var s0 = clamp((W * 0.94 - sx) / 1698, 0.3, 0.85);            /* scale while lying across the bottom */
+    var sy = vh - Math.max(58, vh * 0.09);                          /* height of its centre line */
+    var narrow = W < 900;                                           /* phones: slimmer, and half sunk into the edge so it never covers text */
+    var sd = clamp((vh - 92 - 90) / 976, 0.28, narrow ? 0.4 : 0.62);   /* scale once embedded */
+    var xD = narrow ? W - 2 : W - 10 - 26 * sd, yD = 92 + 976 * sd;    /* where the tip ends up */
+
+    sayaEl.style.transform = 'translate3d(' + (sx - b * (sx + 780 * s0)).toFixed(1) + 'px,' + (sy + b * 40).toFixed(1) + 'px,0) scale(' + s0.toFixed(4) + ')';
+    sayaEl.style.opacity = (1 - b).toFixed(3);
+    sayaEl.style.visibility = b >= 1 ? 'hidden' : 'visible';
+
+    var tipX = sx + 22 * s0 + a * 700 * s0;
+    swordEl.style.transform = 'translate3d(' + lerp(tipX, xD, b).toFixed(1) + 'px,' + lerp(sy, yD, b).toFixed(1) + 'px,0) rotate(' + (-90 * b).toFixed(2) + 'deg) scale(' + lerp(s0, sd, b).toFixed(4) + ')';
+    var glow = a * (1 - b);
+    swordEl.style.filter = 'drop-shadow(0 4px 8px rgba(0,0,0,.45))' + (glow > 0.01 ? ' drop-shadow(0 0 ' + (glow * 12).toFixed(1) + 'px rgba(255,203,154,' + (glow * 0.6).toFixed(2) + '))' : '');
+
+    /* once embedded, a gold glint slides down the blade as the page scrolls */
+    var max = doc.documentElement.scrollHeight - vh;
+    var prog = max > 0 ? clamp(y / max, 0, 1) : 0;
+    glintEl.setAttribute('opacity', b > 0.98 ? '1' : '0');
+    glintEl.setAttribute('x', (600 * (1 - prog)).toFixed(1));
+
+    if (b > 0.995 && !docked) {
+      docked = true;
+      swordEl.classList.remove('thud'); void swordEl.getBoundingClientRect(); swordEl.classList.add('thud');
+    } else if (b < 0.9 && docked) { docked = false; swordEl.classList.remove('thud'); }
+  }
+
   /* ---------- scroll-driven effects ---------- */
-  var moonEl = $('.moon'), parts = $$('[data-speed]'), photoEl = $('#photo'), heroCopy = $('#hero-copy'), nameEl = $('#name'), bar = $('#bar'), fill = $('#progress-fill');
+  var parts = $$('[data-speed]'), photoEl = $('#photo'), heroCopy = $('#hero-copy'), bar = $('#bar'), fill = $('#progress-fill');
   var lastY = scrollY, vel = 0, ticking = false;
   function onScroll() {
     var y = scrollY, vh = innerHeight;
@@ -426,6 +543,11 @@
       parts.forEach(function (el) { el.style.transform = 'translate3d(0,' + (y * parseFloat(el.getAttribute('data-speed'))).toFixed(1) + 'px,0)'; });
       heroCopy.style.transform = 'translate3d(0,' + (y * 0.12).toFixed(1) + 'px,0)';
     }
+    heroCopy.style.opacity = clamp(1 - (y - vh * 0.18) / (vh * 0.55), 0, 1).toFixed(3);
+    if (!reduceMotion()) {
+      moonTarget = -Math.min(y, vh * 1.6) * 0.4;                    /* down = anticlockwise, up = clockwise */
+      if (!moonRaf) moonRaf = requestAnimationFrame(spinMoon);
+    }
     var p = clamp(y / (vh * 0.42), 0, 1);
     photoEl.style.opacity = (1 - p).toFixed(3);
     photoEl.style.transform = 'translate3d(' + (-34 * p).toFixed(1) + 'px,' + (-70 * p - y * 0.05).toFixed(1) + 'px,0) rotate(' + (-5 - 9 * p).toFixed(2) + 'deg) scale(' + (1 - 0.22 * p).toFixed(3) + ')';
@@ -433,12 +555,13 @@
     bar.classList.toggle('scrolled', y > vh * 0.45);
     var max = doc.documentElement.scrollHeight - vh;
     fill.style.transform = 'scaleY(' + (max > 0 ? clamp(y / max, 0, 1) : 0).toFixed(4) + ')';
+    katanaFrame(y);
     follow();
     checkReveals();
     ticking = false;
   }
   addEventListener('scroll', function () { if (!ticking) { ticking = true; requestAnimationFrame(onScroll); } }, { passive: true });
-  addEventListener('resize', function () { if (K.state === 'rest') toRest(); follow(); });
+  addEventListener('resize', function () { if (K.state === 'rest') toRest(); onScroll(); });
 
   /* reveal on enter + active section */
   doc.documentElement.classList.add('js');
@@ -474,7 +597,7 @@
     streaks = [];
     for (var i = 0; i < n; i++) streaks.push({
       x: Math.random() * W, y: Math.random() * H, len: 80 + Math.random() * 220, sp: 0.25 + Math.random() * 0.75,
-      a: 0.05 + Math.random() * 0.11, ph: Math.random() * 6.28, amp: 3 + Math.random() * 9, warm: Math.random() < 0.14
+      a: 0.05 + Math.random() * 0.11, ph: Math.random() * 6.28, amp: 3 + Math.random() * 9, warm: Math.random() < 0.18
     });
   }
   function drawWind(move) {
@@ -484,7 +607,7 @@
       if (move) { s.x += s.sp * boost; s.ph += 0.01; if (s.x - s.len > W) { s.x = -s.len; s.y = Math.random() * H; } }
       var y = s.y, wob = Math.sin(s.ph) * s.amp;
       var grad = g.createLinearGradient(s.x - s.len, y, s.x, y);
-      var col = s.warm ? '255,107,134' : '110,220,235';
+      var col = s.warm ? '255,203,154' : '150,215,205';
       grad.addColorStop(0, 'rgba(' + col + ',0)'); grad.addColorStop(0.7, 'rgba(' + col + ',' + s.a + ')'); grad.addColorStop(1, 'rgba(' + col + ',0)');
       g.strokeStyle = grad; g.lineWidth = 1;
       g.beginPath(); g.moveTo(s.x - s.len, y); g.quadraticCurveTo(s.x - s.len / 2, y + wob, s.x, y + wob * 0.3); g.stroke();
@@ -540,5 +663,5 @@
     var id = location.hash.slice(1);
     requestAnimationFrame(function () { var s = doc.getElementById(id); if (s && s.classList.contains('sec')) { scrollTo(0, s.getBoundingClientRect().top + scrollY); onScroll(); } });
   }
-  window.__portfolio = { jumpTo: jumpTo, state: function () { return K.state; } };
+  window.__portfolio = { jumpTo: jumpTo, state: function () { return K.state; }, kunai: function () { return { x: K.x, y: K.y, a: K.a }; } };
 })();

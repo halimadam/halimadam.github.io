@@ -14,6 +14,10 @@
    - Pictures: put the file in the images folder, then write its path, e.g.
      "images/eoin-1.jpg". Files you want people to download (CV, slides)
      go in the files folder, e.g. "files/eoin-slides.pdf".
+   - Every project, talk, event and activity shows a dashed "screenshot / photo
+     goes here" frame beside its text. The FIRST picture in its images list fills
+     that frame; any further pictures appear as a small gallery under the text.
+     The About section works the same way through  about.image  below.
    ===================================================================== */
 
 window.SITE = {
@@ -33,6 +37,7 @@ window.SITE = {
   /* ---------- ABOUT ME (homepage) ---------- */
   about: {
     title: "About me",
+    image: "",                       // e.g. "images/about.jpg"  (leave "" to show the photo placeholder frame)
     bio: [
       "I'm a first-year Immersive Software Engineering student at the University of Limerick with a strong maths foundation (578 Leaving Cert points, H1 in Applied Maths), building in Java and C.",
       "I'm analytical, disciplined and competitive. I placed in two regional IMTA maths quizzes, scored 93% in a modelling project, and I'm now building a robot for a Robocode competition. I'm a reliable team member who takes ownership of the work.",
