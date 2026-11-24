@@ -350,17 +350,5 @@ window.SITE = {
   contact: {
     title: "Get in touch",
     text: "The best way to reach me is on LinkedIn."
-  },
-
-  /* ---------- DECLARATIONS (required by the assignment) ----------
-     Keep a record of every prompt and response you used with AI tools for the
-     whole academic year. Staff may ask for them. */
-  declaration: {
-    aiTitle: "Declaration of Generative AI and AI-assisted technologies",
-    aiTools: "Claude (Anthropic)",
-    aiReason: "Used to generate the code and visual design of this website from my written specification. ✎ Add anything else you used AI for, for example checking your grammar. State clearly that the reflections are your own words, if that is true.",
-    plagiarism: "I declare that this material, which I now submit for assessment, is entirely my own work and has not been taken from the work of others, save and to the extent that such work has been cited and acknowledged within the text. I understand that plagiarism, collusion, and copying are grave and serious offences in the university and accept the penalties that would be imposed should I engage in plagiarism, collusion or copying. I understand that any use of AI or AI-assisted tools must be declared fully. I have read and understood the Assignment Regulations set out in the module documentation. This assignment, or any part of it, has not been previously submitted by me or any other person for assessment on this or any other course of study.",
-    signed: "Halim Adam",
-    studentId: "✎ your student ID"
   }
 };

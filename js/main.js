@@ -258,17 +258,10 @@
   }
 
   function buildFooter() {
-    var D = C.declaration || {};
     var f = $('#footer');
     f.className = 'foot';
     f.appendChild(h('div', { class: 'wrap' },
-      h('h2', { class: 'foot-h' }, D.aiTitle || 'Declaration of Generative AI and AI-assisted technologies'),
-      h('p', null, h('strong', null, 'Tool used: '), T(D.aiTools || '')),
-      h('p', null, h('strong', null, 'Reason: '), T(D.aiReason || '')),
-      h('h2', { class: 'foot-h' }, 'Plagiarism declaration'),
-      P(D.plagiarism),
-      h('p', null, h('strong', null, 'Signed: '), T(D.signed || ''), '   ', h('strong', null, 'ID: '), T(D.studentId || '')),
-      h('p', { class: 'fine' }, '© ', String(new Date().getFullYear()), ' ', C.first, ' ', C.last)
+      h('p', { class: 'fine' }, '\u00A9 ', String(new Date().getFullYear()), ' ', C.first, ' ', C.last)
     ));
   }
 
