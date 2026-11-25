@@ -535,7 +535,7 @@
 
   /* ---------- scroll-driven effects ---------- */
   var parts = $$('[data-speed]'), photoEl = $('#photo'), heroCopy = $('#hero-copy'), bar = $('#bar'), fill = $('#progress-fill');
-  var lastY = scrollY, vel = 0, ticking = false;
+  var depthEl = $('#depth'), lastY = scrollY, vel = 0, ticking = false;
   function onScroll() {
     var y = scrollY, vh = innerHeight;
     vel = vel * 0.8 + (y - lastY) * 0.2; lastY = y;
@@ -555,6 +555,7 @@
     bar.classList.toggle('scrolled', y > vh * 0.45);
     var max = doc.documentElement.scrollHeight - vh;
     fill.style.transform = 'scaleY(' + (max > 0 ? clamp(y / max, 0, 1) : 0).toFixed(4) + ')';
+    depthEl.style.opacity = (0.36 * (max > 0 ? clamp(y / max, 0, 1) : 0)).toFixed(3);   /* even, gradual: 36% darker at the very bottom */
     katanaFrame(y);
     follow();
     checkReveals();

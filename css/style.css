@@ -57,6 +57,8 @@ ul, ol { margin: 0; padding: 0; }
 }
 
 /* ---------- background layers ---------- */
+/* the page sinks slowly into the dark as you scroll: opacity is set from scroll progress in main.js */
+.depth { position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0; background: linear-gradient(180deg, #0a1413, #050a09); }
 #wind { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
 .progress { position: fixed; left: 0; top: 0; bottom: 0; width: 3px; z-index: 30; background: rgba(209, 232, 226, .06); }
 .progress i { display: block; height: 100%; transform-origin: top; transform: scaleY(0); background: linear-gradient(var(--peach), var(--teal-bright)); }
@@ -419,7 +421,7 @@ dialog p { text-align: center; margin: 8px 0 0; color: var(--muted); }
 @media print {
   :root { color-scheme: light; }
   body { background: #fff; color: #111; font-size: 11pt; }
-  #wind, .progress, .bar, .kunai, .katana, .hero-art, .pin, .skip, dialog, .media-ph, .feat-media:not(:has(img)) { display: none !important; }
+  #wind, .depth, .progress, .bar, .kunai, .katana, .hero-art, .pin, .skip, dialog, .media-ph, .feat-media:not(:has(img)) { display: none !important; }
   .hero { min-height: 0; }
   .hero-copy { padding: 0 0 20px; transform: none !important; opacity: 1 !important; }
   .photo { position: relative; left: 0; top: 0; transform: none !important; opacity: 1 !important; visibility: visible !important; box-shadow: none; margin: 0 0 12px; }
