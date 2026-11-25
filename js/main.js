@@ -115,8 +115,7 @@
     return h('section', { id: id, class: 'sec' + (alt ? ' alt' : ''), 'aria-labelledby': id + '-h' },
       h('div', { class: 'wrap' },
         h('div', { class: 'sec-head' },
-          h('h2', { id: id + '-h', tabindex: '-1', class: 'slash' }, title),
-          h('span', { class: 'pin', 'aria-hidden': 'true' })),
+          h('h2', { id: id + '-h', tabindex: '-1', class: 'slash' }, title)),
         kids));
   }
 
@@ -360,22 +359,38 @@
   });
   $('#mark').addEventListener('click', function (e) { e.preventDefault(); returnToRest(); smoothTo(0, 700); history.replaceState(null, '', location.pathname); });
 
-  /* ---------- kunai ---------- */
+  /* ---------- kunai ----------
+     The kunai waits in the bottom-left corner until the first jump. Choosing a section throws it in an
+     arc from wherever it currently is to the OUTSIDE of that section's heading (left of the first letter
+     for left-aligned headings, right of the last letter for right-aligned ones) where it stays stuck
+     until the next jump. Headings alternate sides, so jumping down the menu makes it swap sides. */
   var kw = $('#kunai');
-  var K = { state: 'rest', x: 0, y: 0, a: 78, s: 0.5, pin: null, raf: 0, stuckAngle: 24 };
+  kw.appendChild(h('i', { class: 'kunai-ring' }));
+  var K = { state: 'rest', x: 0, y: 0, a: 78, s: 0.5, head: null, raf: 0, timer: 0 };
   function setK(x, y, a, s) {
     K.x = x; K.y = y; K.a = a; K.s = s;
     kw.style.transform = 'translate3d(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px,0) rotate(' + a.toFixed(2) + 'deg) scale(' + s.toFixed(3) + ')';
   }
-  /* The kunai waits in the bottom-left corner. Its tip is the origin, so the body trails off to the left. */
+  /* The kunai's tip is the origin, so the body trails off behind it. */
   function restPose() {
     var a = 78, s = 0.5, body = 110 * s;
     return { x: 28 + body * Math.sin(a * Math.PI / 180), y: innerHeight - 34, a: a, s: s };
   }
   function toRest() { var r = restPose(); setK(r.x, r.y, r.a, r.s); }
-  function pinPoint(pin) { var r = pin.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }
+  var STUCK = 135;   /* degrees: tip down and inward, body trailing up and outward */
+  /* Where the kunai sticks for a heading, in current viewport coordinates. */
+  function anchorFor(heading) {
+    var rg = doc.createRange(); rg.selectNodeContents(heading);
+    var rects = rg.getClientRects(), box = rg.getBoundingClientRect();
+    if (!rects.length || !box.width) { box = heading.getBoundingClientRect(); rects = [box]; }
+    var ta = getComputedStyle(heading).textAlign, right = ta === 'right' || ta === 'end';
+    var edge = right ? box.right : box.left, room = right ? innerWidth - edge : edge;
+    var tight = room < 70;                                  /* phones: no gutter, so stand it almost upright beside the first letter */
+    var x = right ? edge + (tight ? 2 : 12) : edge - (tight ? 2 : 12);
+    var ang = tight ? 162 : STUCK;
+    return { x: x, y: rects[0].top + rects[0].height * 0.5, a: right ? -ang : ang, s: tight ? 0.6 : clamp(room / 75, 0.5, 0.95) };
+  }
   var eIO = function (t) { return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; };
-  var eOut = function (t) { return 1 - Math.pow(1 - t, 3); };
   var lerp = function (a, b, t) { return a + (b - a) * t; };
   function lerpAngle(a, b, t) { var d = ((b - a + 540) % 360) - 180; return a + d * t; }
 
@@ -389,95 +404,87 @@
       if (t < 1) requestAnimationFrame(step);
     })(t0);
   }
+  /* Only used when the stuck heading has scrolled out of view, or on "back to top". */
   function returnToRest() {
     cancelFlight();
-    if (K.state === 'rest') return;
-    K.state = 'returning';
+    if (K.state === 'rest' || K.state === 'returning') return;
+    K.state = 'returning'; K.head = null;
     kw.classList.remove('stuck', 'flying');
     kw.style.opacity = '0';
-    setTimeout(function () {
+    K.timer = setTimeout(function () {
+      K.timer = 0;
       kw.style.transition = 'none'; toRest(); void kw.offsetWidth;
       kw.style.transition = ''; kw.style.opacity = '';
-      K.state = 'rest'; K.pin = null;
+      K.state = 'rest';
     }, 260);
   }
-  function land(pin, angle) {
+  function land(heading) {
     cancelFlight();
-    K.state = 'stuck'; K.pin = pin; K.stuckAngle = angle;
+    K.state = 'stuck'; K.head = heading;
     kw.classList.remove('flying'); kw.classList.add('stuck');
     kw.classList.remove('thud'); void kw.offsetWidth; kw.classList.add('thud');
-    pin.classList.remove('hit'); void pin.offsetWidth; pin.classList.add('hit');
     follow();
   }
   function follow() {
-    if (K.state !== 'stuck' || !K.pin) return;
-    var p = pinPoint(K.pin);
-    setK(p.x, p.y, K.stuckAngle, 0.95);
-    if (p.y < -150 || p.y > innerHeight + 40) returnToRest();
+    if (K.state !== 'stuck' || !K.head) return;
+    var an = anchorFor(K.head);
+    setK(an.x, an.y, an.a, an.s);
+    if (an.y < -150 || an.y > innerHeight + 40) returnToRest();
   }
 
-  /* Every jump is a fresh throw from the bottom-left corner. If the kunai is still stuck in the
-     previous section it is first pulled free and carried back to the corner, so a jump between two
-     nearby sections still reads as one clear throw instead of a wiggle on the spot. */
   function jumpTo(id) {
     var sec = doc.getElementById(id); if (!sec) return;
-    var pin = $('.pin', sec);
+    var heading = $('h2', sec);
     var maxY = doc.documentElement.scrollHeight - innerHeight;
     var startY = scrollY;
     var endY = clamp(sec.getBoundingClientRect().top + scrollY, 0, maxY);
-    var heading = $('h2', sec);
     function done() {
       if (heading) heading.focus({ preventScroll: true });
       history.replaceState(null, '', '#' + id);
     }
     cancelFlight();
-    var pr = pinPoint(pin);
-    var target = { x: pr.x, y: pr.y + (startY - endY) };
+    if (K.timer) { clearTimeout(K.timer); K.timer = 0; kw.style.opacity = ''; }
+    var an = anchorFor(heading);
+    var target = { x: an.x, y: an.y + (startY - endY), a: an.a, s: an.s };   /* where the heading will be once the page has scrolled */
 
     if (reduceMotion()) {
-      scrollTo(0, endY); K.state = 'stuck'; kw.classList.add('stuck');
-      requestAnimationFrame(function () { land(pin, 22); done(); }); return;
+      scrollTo(0, endY);
+      requestAnimationFrame(function () { land(heading); done(); }); return;
     }
 
-    var rest = restPose();
-    var from = { x: K.x, y: K.y, a: K.a, s: K.s };
-    var pullBack = (K.state === 'stuck' && K.y >= -20 && K.y <= innerHeight + 20) ? 300 : 0;
+    /* it leaves from where it is now: the heading it is stuck in, or the corner if it has not been thrown yet */
+    var from = (K.state === 'rest' || K.state === 'returning') ? restPose() : { x: K.x, y: K.y, a: K.a, s: K.s };
     var fly = clamp(580 + Math.abs(endY - startY) * 0.05, 720, 1050);
-    var total = pullBack + fly;
-    K.state = 'flying'; K.pin = null;
-    kw.classList.remove('stuck', 'thud'); kw.classList.add('flying'); kw.style.opacity = '';
-    if (!pullBack) setK(rest.x, rest.y, rest.a, rest.s);
+    K.state = 'flying'; K.head = null;
+    kw.classList.remove('stuck', 'thud'); kw.classList.add('flying');
+    setK(from.x, from.y, from.a, from.s);
 
-    var dx = target.x - rest.x, dy = target.y - rest.y, dist = Math.hypot(dx, dy) || 1;
-    var nx = -dy / dist, ny = dx / dist, bow = Math.min(190, dist * 0.2);
-    var c = { x: (rest.x + target.x) / 2 + nx * bow, y: (rest.y + target.y) / 2 + ny * bow };
-    var t0 = performance.now(), lastA = rest.a;
+    /* cubic arc: it climbs, then drops in along the landing angle */
+    var dx = target.x - from.x, dy = target.y - from.y, dist = Math.hypot(dx, dy) || 1;
+    var rad = target.a * Math.PI / 180, din = { x: Math.sin(rad), y: -Math.cos(rad) };
+    var lift = clamp(dist * 0.2, 40, 190), run = clamp(dist * 0.26, 60, 230);
+    var P0 = from, P3 = target;
+    var P1 = { x: from.x + dx * 0.3, y: from.y + dy * 0.3 - lift };
+    var P2 = { x: target.x - din.x * run, y: Math.max(target.y - din.y * run, 24) };
+    var t0 = performance.now(), lastA = from.a;
 
-    function interrupt() { cancelFlight(); unlisten(); scrollTo(0, scrollY); land(pin, clamp(lastA, -40, 40)); done(); }
+    function interrupt() { cancelFlight(); unlisten(); scrollTo(0, scrollY); land(heading); done(); }
     function unlisten() { ['wheel', 'touchstart', 'keydown'].forEach(function (ev) { removeEventListener(ev, interrupt); }); }
     ['wheel', 'touchstart', 'keydown'].forEach(function (ev) { addEventListener(ev, interrupt, { passive: true, once: true }); });
 
     function frame(now) {
-      var el = now - t0, t = clamp(el / total, 0, 1);
+      var el = now - t0, t = clamp(el / fly, 0, 1);
       scrollTo(0, startY + (endY - startY) * eIO(t));
-      if (el < pullBack) {
-        var r = eIO(el / pullBack);
-        setK(lerp(from.x, rest.x, r), lerp(from.y, rest.y, r), lerpAngle(from.a, rest.a, r), lerp(from.s, rest.s, r));
-        lastA = K.a;
-      } else {
-        var ft = clamp((el - pullBack) / fly, 0, 1);
-        var k = eOut(ft), u = 1 - k;
-        var x = u * u * rest.x + 2 * u * k * c.x + k * k * target.x;
-        var y = u * u * rest.y + 2 * u * k * c.y + k * k * target.y;
-        var tx = 2 * u * (c.x - rest.x) + 2 * k * (target.x - c.x);
-        var ty = 2 * u * (c.y - rest.y) + 2 * k * (target.y - c.y);
-        var tang = Math.atan2(tx, -ty) * 180 / Math.PI;
-        var a = lerpAngle(rest.a, tang, clamp(ft / 0.22, 0, 1));
-        lastA = a;
-        setK(x, y, a, lerp(rest.s, 0.95, k));
-      }
+      var k = 1 - Math.pow(1 - t, 1.8), u = 1 - k;
+      var x = u * u * u * P0.x + 3 * u * u * k * P1.x + 3 * u * k * k * P2.x + k * k * k * P3.x;
+      var y = u * u * u * P0.y + 3 * u * u * k * P1.y + 3 * u * k * k * P2.y + k * k * k * P3.y;
+      var tx = 3 * u * u * (P1.x - P0.x) + 6 * u * k * (P2.x - P1.x) + 3 * k * k * (P3.x - P2.x);
+      var ty = 3 * u * u * (P1.y - P0.y) + 6 * u * k * (P2.y - P1.y) + 3 * k * k * (P3.y - P2.y);
+      var a = lerpAngle(from.a, Math.atan2(tx, -ty) * 180 / Math.PI, clamp(t / 0.2, 0, 1));
+      a = lerpAngle(a, target.a, clamp((t - 0.75) / 0.25, 0, 1));
+      setK(x, y, a, lerp(from.s, target.s, eIO(t)));
       if (t < 1) K.raf = requestAnimationFrame(frame);
-      else { unlisten(); scrollTo(0, endY); land(pin, clamp(lastA, -40, 40)); done(); }
+      else { unlisten(); scrollTo(0, endY); land(heading); done(); }
     }
     K.raf = requestAnimationFrame(frame);
   }

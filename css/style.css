@@ -132,6 +132,8 @@ main, footer { position: relative; z-index: 1; }
 .kunai.flying { opacity: 1; }
 .kunai.flying svg { filter: drop-shadow(0 0 7px rgba(255, 203, 154, .75)); }
 .kunai.stuck { opacity: 1; }
+.kunai-ring { position: absolute; left: -15px; top: -15px; width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--peach); opacity: 0; }
+.kunai.thud .kunai-ring { animation: ring .8s ease-out .04s forwards; }
 .kunai.thud svg { animation: thud .8s cubic-bezier(.2, .7, .3, 1); }
 @keyframes thud {
   0% { transform: rotate(0); } 14% { transform: rotate(7deg); } 32% { transform: rotate(-5deg); }
@@ -201,16 +203,12 @@ main, footer { position: relative; z-index: 1; }
 .sec-head h2:focus { outline: none; }
 .sec-head h2 { font-size: clamp(2rem, 4.6vw, 3.3rem); font-weight: 700; letter-spacing: -.005em; padding-right: 64px; padding-bottom: .3em; outline-offset: 8px; }
 .sec-head::after { content: ""; position: absolute; left: 0; bottom: 0; height: 2px; width: 100%; border-radius: 2px; background: linear-gradient(90deg, var(--tan), rgba(217, 176, 140, 0) 70%); }
-.pin { position: absolute; right: 22px; top: 10px; width: 14px; height: 14px; }
-.pin::before { content: ""; position: absolute; inset: 4px; border-radius: 50%; background: var(--tan); opacity: .55; }
-.pin.hit::after { content: ""; position: absolute; inset: -6px; border-radius: 50%; border: 2px solid var(--peach); animation: ring .8s ease-out forwards; }
 @keyframes ring { from { transform: scale(.3); opacity: 1; } to { transform: scale(3.4); opacity: 0; } }
 
 /* every second section mirrors its heading to the right, so the page does not read the same all the way down */
 .sec.alt .sec-head { align-items: flex-end; text-align: right; }
 .sec.alt .sec-head h2 { padding-right: 0; padding-left: 64px; }
 .sec.alt .sec-head::after { background: linear-gradient(270deg, var(--tan), rgba(217, 176, 140, 0) 70%); }
-.sec.alt .pin { right: auto; left: 22px; }
 
 .intro { color: var(--muted); font-size: 1.1rem; max-width: 62ch; margin-bottom: 2em; }
 .sec.alt .intro { margin-left: auto; text-align: right; }
@@ -394,7 +392,6 @@ dialog p { text-align: center; margin: 8px 0 0; color: var(--muted); }
   .sec.alt .sec-head, .sec.alt .intro { text-align: left; align-items: flex-start; margin-left: 0; }
   .sec.alt .sec-head h2 { padding-left: 0; padding-right: 64px; }
   .sec.alt .sec-head::after { background: linear-gradient(90deg, var(--tan), rgba(217, 176, 140, 0) 70%); }
-  .sec.alt .pin { left: auto; right: 22px; }
   .js .sec.alt .slash { clip-path: inset(0 100% 0 0); }
   .js .feat .feat-text.reveal, .js .feat.flip .feat-text.reveal, .js .talk .talk-side.reveal, .js .talk.flip .talk-side.reveal { transform: translateY(22px); }
 }
@@ -403,7 +400,6 @@ dialog p { text-align: center; margin: 8px 0 0; color: var(--muted); }
   .li { padding: 8px 12px; font-size: .88rem; }
   .sec-head { min-height: 128px; }
   .sec-head h2, .sec.alt .sec-head h2 { padding-right: 54px; }
-  .pin, .sec.alt .pin { right: 26px; }
   .panel, .step-row { padding: 20px 20px; }
   .hero-copy { padding-bottom: 130px; }
   .tiles { grid-template-columns: 1fr; }
@@ -412,7 +408,6 @@ dialog p { text-align: center; margin: 8px 0 0; color: var(--muted); }
 /* ---------- reduced motion: no flying, no parallax, content always visible ---------- */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
-  .pin.hit::after { display: none; }
   .js .slash, .js .sec.alt .slash { clip-path: none; }
   .js .reveal, .js .feat .feat-text.reveal, .js .feat.flip .feat-text.reveal, .js .talk .talk-side.reveal, .js .talk.flip .talk-side.reveal, .js .reveal.reveal-media { opacity: 1; transform: none; }
 }
@@ -421,7 +416,7 @@ dialog p { text-align: center; margin: 8px 0 0; color: var(--muted); }
 @media print {
   :root { color-scheme: light; }
   body { background: #fff; color: #111; font-size: 11pt; }
-  #wind, .depth, .progress, .bar, .kunai, .katana, .hero-art, .pin, .skip, dialog, .media-ph, .feat-media:not(:has(img)) { display: none !important; }
+  #wind, .depth, .progress, .bar, .kunai, .katana, .hero-art, .skip, dialog, .media-ph, .feat-media:not(:has(img)) { display: none !important; }
   .hero { min-height: 0; }
   .hero-copy { padding: 0 0 20px; transform: none !important; opacity: 1 !important; }
   .photo { position: relative; left: 0; top: 0; transform: none !important; opacity: 1 !important; visibility: visible !important; box-shadow: none; margin: 0 0 12px; }
