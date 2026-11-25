@@ -555,7 +555,7 @@
     bar.classList.toggle('scrolled', y > vh * 0.45);
     var max = doc.documentElement.scrollHeight - vh;
     fill.style.transform = 'scaleY(' + (max > 0 ? clamp(y / max, 0, 1) : 0).toFixed(4) + ')';
-    depthEl.style.opacity = (0.36 * (max > 0 ? clamp(y / max, 0, 1) : 0)).toFixed(3);   /* even, gradual: 36% darker at the very bottom */
+    depthEl.style.opacity = (0.75 * (max > 0 ? clamp(y / max, 0, 1) : 0)).toFixed(3);   /* even, gradual: 75% overlay at the very bottom */
     katanaFrame(y);
     follow();
     checkReveals();

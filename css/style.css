@@ -58,7 +58,7 @@ ul, ol { margin: 0; padding: 0; }
 
 /* ---------- background layers ---------- */
 /* the page sinks slowly into the dark as you scroll: opacity is set from scroll progress in main.js */
-.depth { position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0; background: linear-gradient(180deg, #0a1413, #050a09); }
+.depth { position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0; background: linear-gradient(180deg, #071110, #030706); }
 #wind { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
 .progress { position: fixed; left: 0; top: 0; bottom: 0; width: 3px; z-index: 30; background: rgba(209, 232, 226, .06); }
 .progress i { display: block; height: 100%; transform-origin: top; transform: scaleY(0); background: linear-gradient(var(--peach), var(--teal-bright)); }
@@ -346,7 +346,7 @@ h3.sub { font-size: 1.3rem; margin: 2.6em 0 1em; }
 .cta { text-align: center; padding: clamp(36px, 7vw, 72px) clamp(20px, 5vw, 48px); border-radius: 32px; border: 1px solid rgba(42, 166, 163, .4); background: radial-gradient(600px 260px at 50% 0%, rgba(17, 100, 102, .55), rgba(17, 100, 102, .12) 70%); }
 .cta .intro { margin: 0 auto 1.6em; text-align: center; font-size: 1.25rem; color: var(--text); }
 .contact { list-style: none; display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; }
-.foot { padding: 40px 0 60px; margin-top: 50px; border-top: 1px solid var(--line); background: rgba(26, 33, 31, .85); }
+.foot { padding: 40px 0 60px; margin-top: 50px; border-top: 1px solid var(--line); background: rgba(3, 7, 6, .35); }
 .foot p { max-width: 80ch; color: var(--muted); }
 .foot .fine { margin: 0; font-size: .9rem; }
 
