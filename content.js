@@ -31,7 +31,7 @@ window.SITE = {
   photoAlt: "Portrait of Halim Adam",
   linkedin: "https://www.linkedin.com/in/halim-adam-swe",   // required by the assignment
   github: "https://github.com/halimadam",
-  email: "✎ add a professional email address",
+  email: "halimadam.swe@gmail.com",
   cv: "",                            // e.g. "files/halim-adam-cv.pdf"  (see HOW-TO-EDIT.md about phone numbers)
 
   /* ---------- ABOUT ME (homepage) ---------- */
