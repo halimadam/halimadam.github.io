@@ -320,7 +320,7 @@
     .forEach(function (fn) { var s = fn(); if (s) main.appendChild(s); });
   buildFooter();
 
-  doc.title = C.first + ' ' + C.last + ' | ' + (C.role ? C.role.split(' at ')[0] : 'Portfolio');
+  doc.title = C.first + ' ' + C.last + ' | SWE';
   $('#mark').textContent = C.first + ' ' + C.last;
   if (has(C.linkedin)) $('#li').href = C.linkedin; else $('#li').remove();
 
