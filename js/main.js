@@ -122,7 +122,7 @@
   /* ---------- HERO ---------- */
   function buildHero() {
     var photo = has(C.photo)
-      ? h('img', { src: C.photo, alt: C.photoAlt || '' })
+      ? h('img', { src: C.photo, alt: C.photoAlt || '', width: 480, height: 600, fetchpriority: 'high', decoding: 'async' })
       : h('div', { class: 'photo-ph', 'aria-label': 'Space for a photo' }, h('span', null, 'photo soon'));
     var art = h('div', { class: 'hero-art', 'aria-hidden': 'true', html:
       '<div class="hero-glow"></div>' +
